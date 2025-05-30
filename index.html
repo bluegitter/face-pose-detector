@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>动作验证示例</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="faceLivenessSDK.js"></script> <!-- 引入封装的 SDK -->
+  <style>
+    .input_video {
+      transform: scaleX(-1);
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      object-fit: cover;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin: 0 auto;
+    }
+    .video-wrapper {
+      width: 400px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    #timer {
+      font-size: 16px;
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-wrapper">
+    <h2 id="status">请面对屏幕</h2>
+    <video id="video" class="input_video" autoplay playsinline muted></video>
+    <div id="timer">剩余时间：30秒</div>
+  </div>
+
+  <script>
+    const sdk = new FaceLivenessSDK({
+      videoElementId: "video",
+      statusElementId: "status",
+      timerElementId: "timer",
+      challengeSequence: ["张嘴", "点头", "眨眼", "向右转头"],
+      timeout: 30,
+      onVerified: () => alert("✅ 验证通过！"),
+      onFailed: () => alert("❌ 验证失败，请重试。")
+    });
+
+    sdk.start();
+  </script>
+</body>
+</html>
