@@ -137,7 +137,7 @@ class FaceLivenessSDK {
           this.timerElement.style.display = 'none';
           this.onVerified();
         } else if (!passed) {
-          this.statusElement.textContent = `挑战 ${this.challengeSequence[this.currentStep]}｜当前：${pose.action} ${additionalStatus}`;
+          this.statusElement.textContent = `请 ${this.challengeSequence[this.currentStep]}`;
         }
       } else {
         this.statusElement.textContent = '未检测到人脸';

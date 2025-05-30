@@ -17,25 +17,31 @@
       height: 300px;
       border-radius: 50%;
       object-fit: cover;
+      z-index: 1;
     }
+
     #status {
       text-align: center;
       margin-top: 20px;
+      z-index: 0;
     }
+
     #timer {
-      text-align: center;
-      margin-top: 10px;
+      position: absolute;
+      top: 370px; /* 圆形视频下方位置 */
+      left: 50%;
+      transform: translateX(-50%);
       font-size: 16px;
       color: red;
+      z-index: 2; /* 显示在 video/canvas 上面 */
     }
   </style>
 </head>
 <body>
   <h2 id="status">请面对屏幕</h2>
-  <div id="timer">剩余时间：30秒</div>
   <video id="video" autoplay playsinline muted></video>
   <canvas id="canvas" width="640" height="480"></canvas>
-
+  <div id="timer">剩余时间：30秒</div>
   <script>
     const sdk = new FaceLivenessSDK({
       videoElementId: "video",
@@ -44,8 +50,8 @@
       timerElementId: "timer",
       challengeSequence: ["张嘴", "点头", "眨眼", "向左转头","向右转头"],
       timeout: 30,
-      onVerified: () => alert("✅ 验证通过！"),
-      onFailed: () => alert("❌ 验证失败，请重试。")
+      onVerified: () => status.textContent = `✅ 验证通过 🎉`,
+      onFailed: () => status.textContent = `❌ 验证失败，请重试。`,
     });
 
     sdk.start();
