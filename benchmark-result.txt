@@ -1,0 +1,84 @@
+k6 run face_test.js
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: face_test.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 10 max VUs, 2m30s max duration (incl. graceful stop):
+              * default: 10 looping VUs for 2m0s (gracefulStop: 30s)
+
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......................: 850     7.006895/s
+    checks_succeeded...................: 100.00% 850 out of 850
+    checks_failed......................: 0.00%   0 out of 850
+
+    ✓ status is 200
+
+    HTTP
+    http_req_duration.......................................................: avg=1.42s min=311.5ms  med=1.42s max=1.61s p(90)=1.48s p(95)=1.5s
+      { expected_response:true }............................................: avg=1.42s min=311.5ms  med=1.42s max=1.61s p(90)=1.48s p(95)=1.5s
+    http_req_failed.........................................................: 0.00%  0 out of 850
+    http_reqs...............................................................: 850    7.006895/s
+
+    EXECUTION
+    iteration_duration......................................................: avg=1.42s min=313.75ms med=1.42s max=1.61s p(90)=1.48s p(95)=1.5s
+    iterations..............................................................: 850    7.006895/s
+    vus.....................................................................: 4      min=4        max=10
+    vus_max.................................................................: 10     min=10       max=10
+
+    NETWORK
+    data_received...........................................................: 551 kB 4.5 kB/s
+    data_sent...............................................................: 143 MB 1.2 MB/s
+
+
+# Test Evnironment
+lscpu
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                64
+On-line CPU(s) list:   0-63
+Thread(s) per core:    2
+Core(s) per socket:    16
+座：                 2
+NUMA 节点：         2
+厂商 ID：           GenuineIntel
+CPU 系列：          6
+型号：              85
+型号名称：        Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz
+步进：              7
+CPU MHz：             999.932
+CPU max MHz:           3900.0000
+CPU min MHz:           1000.0000
+BogoMIPS：            4600.00
+虚拟化：           VT-x
+L1d 缓存：          32K
+L1i 缓存：          32K
+L2 缓存：           1024K
+L3 缓存：           22528K
+NUMA 节点0 CPU：    0-15,32-47
+NUMA 节点1 CPU：    16-31,48-63
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc aperfmperf eagerfpu pni pclmulqdq dtes64 ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch epb cat_l3 cdp_l3 invpcid_single intel_ppin intel_pt ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow vnmi flexpriority ept vpid fsgsbase tsc_adjust bmi1 hle avx2 smep bmi2 erms invpcid rtm cqm mpx rdt_a avx512f avx512dq rdseed adx smap clflushopt clwb avx512cd avx512bw avx512vl xsaveopt xsavec xgetbv1 cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local dtherm ida arat pln pts hwp hwp_act_window hwp_epp hwp_pkg_req pku ospke avx512_vnni md_clear spec_ctrl intel_stibp flush_l1d arch_capabilities
+
+# CPU Load
+top - 06:19:18 up 168 days, 46 min,  0 users,  load average: 6.50, 4.53, 3.84
+Tasks:   5 total,   3 running,   2 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 14.6 us,  5.2 sy,  0.0 ni, 79.4 id,  0.8 wa,  0.0 hi,  0.1 si,  0.0 st
+MiB Mem : 128412.2 total,  31830.8 free,  66124.4 used,  30456.9 buff/cache
+MiB Swap: 131072.0 total, 127966.0 free,   3106.0 used.  61233.8 avail Mem 
+
+   PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                                                                              
+   135 www-data  20   0   36.6g   1.7g  26620 R 563.1   1.4  36:20.21 uwsgi                                                                                                
+   134 www-data  20   0   36.6g   1.7g  26672 R 551.8   1.4  35:57.53 uwsgi                                                                                                
+ 89641 root      20   0    8928   1964   1452 R   0.3   0.0   0:00.03 top                                                                                                  
+     1 www-data  20   0   11.6g 208572  91600 S   0.0   0.2   0:11.99 uwsgi                                                                                                
+ 89635 root      20   0    6036   2076   1644 S   0.0   0.0   0:00.04 bash            
