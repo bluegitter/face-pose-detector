@@ -1,60 +1,55 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <title>Face Liveness Demo</title>
+  <meta charset="UTF-8">
+  <title>动作验证示例</title>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-  <script src="faceLivenessSDK.js"></script>
+  <script src="faceLivenessSDK.js"></script> <!-- 引入封装的 SDK -->
   <style>
-    video, canvas {
-      position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%) scaleX(-1);
-      width: 300px;
-      height: 300px;
+    .input_video {
+      transform: scaleX(-1);
+      width: 240px;
+      height: 240px;
       border-radius: 50%;
       object-fit: cover;
-      z-index: 1;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin: 0 auto;
     }
-
-    #status {
+    .video-wrapper {
+      width: 400px;
+      margin: 0 auto;
       text-align: center;
-      margin-top: 20px;
-      z-index: 0;
     }
-
     #timer {
-      position: absolute;
-      top: 370px; /* 圆形视频下方位置 */
-      left: 50%;
-      transform: translateX(-50%);
       font-size: 16px;
       color: red;
-      z-index: 2; /* 显示在 video/canvas 上面 */
     }
   </style>
 </head>
 <body>
-  <h2 id="status">请面对屏幕</h2>
-  <video id="video" autoplay playsinline muted></video>
-  <canvas id="canvas" width="640" height="480"></canvas>
-  <div id="timer">剩余时间：30秒</div>
+  <div class="video-wrapper">
+    <h2 id="status">请面对屏幕</h2>
+    <video id="video" class="input_video" autoplay playsinline muted></video>
+    <div id="timer">剩余时间：30秒</div>
+  </div>
+
   <script>
     const sdk = new FaceLivenessSDK({
       videoElementId: "video",
-      canvasElementId: "canvas",
       statusElementId: "status",
       timerElementId: "timer",
-      challengeSequence: ["张嘴", "点头", "眨眼", "向左转头","向右转头"],
+      challengeSequence: ["张嘴", "点头", "眨眼", "向左转头", "向右转头"],
       timeout: 30,
-      onVerified: () => status.textContent = `✅ 验证通过 🎉`,
-      onFailed: () => status.textContent = `❌ 验证失败，请重试。`,
+      recognitionUrl: "https://localhost:9443/api/v1/recognition/recognize",
+      apiKey: "d295e5bf-152c-4cf9-bb91-0088c64cfb12",
+      onVerified: (subjectName) => alert(`✅ 验证通过！用户：${subjectName}`),
+      onFailed: () => alert("❌ 验证失败，请重试。")
     });
-
+  
     sdk.start();
   </script>
+  
 </body>
 </html>

@@ -2,14 +2,14 @@
 class FaceLivenessSDK {
   constructor(options) {
     this.videoElement = document.getElementById(options.videoElementId);
-    this.canvasElement = document.getElementById(options.canvasElementId);
-    this.canvasCtx = this.canvasElement.getContext('2d');
     this.statusElement = document.getElementById(options.statusElementId);
     this.timerElement = document.getElementById(options.timerElementId);
     this.challengeSequence = options.challengeSequence || ["张嘴", "点头", "眨眼", "向右转头"];
     this.timeout = options.timeout || 30;
     this.onVerified = options.onVerified || function () {};
     this.onFailed = options.onFailed || function () {};
+    this.recognitionUrl = options.recognitionUrl;
+    this.apiKey = options.apiKey;
 
     this.currentStep = 0;
     this.verified = false;
@@ -45,34 +45,6 @@ class FaceLivenessSDK {
     }, 1000);
   }
 
-  _drawFaceGuide() {
-    const ctx = this.canvasCtx;
-    const canvas = this.canvasElement;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radiusX = canvas.width * 0.2;
-    const radiusY = canvas.height * 0.35;
-
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 3]);
-    ctx.beginPath();
-    ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
-    ctx.stroke();
-
-    ctx.save();
-    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);  // 取消 scaleX(-1)
-    ctx.font = '16px Arial';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.textAlign = 'center';
-    ctx.fillText('请将脸部对准椭圆区域', canvas.width / 2, canvas.height - 30);
-    ctx.restore();
-
-    ctx.restore();
-  }
-  
-
   _initFaceMesh() {
     const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -85,37 +57,8 @@ class FaceLivenessSDK {
       minTrackingConfidence: 0.5
     });
 
-    faceMesh.onResults(results => {
-      this.canvasCtx.save();
-      this.canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
-      this.canvasCtx.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
-      this._drawFaceGuide();
-
+    faceMesh.onResults(async (results) => {
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        for (const landmarks of results.multiFaceLandmarks) {
-          drawConnectors(this.canvasCtx, landmarks, FACEMESH_TESSELATION, {
-            color: 'rgba(192,192,192,0.3)', // 更淡的灰色线
-            lineWidth: 0.5
-          });
-          drawConnectors(this.canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {
-            color: 'rgba(255,48,48,0.4)', // 更淡的红色线
-            lineWidth: 0.5
-          });
-          drawConnectors(this.canvasCtx, landmarks, FACEMESH_LEFT_EYE, {
-            color: 'rgba(48,255,48,0.4)', // 更淡的绿色线
-            lineWidth: 0.5
-          });
-          drawConnectors(this.canvasCtx, landmarks, FACEMESH_FACE_OVAL, {
-            color: 'rgba(224,224,224,0.3)', // 更淡的灰白轮廓
-            lineWidth: 0.5
-          });
-          drawLandmarks(this.canvasCtx, landmarks, {
-            color: 'rgba(255,111,0,0.3)', // 更淡的橙色点
-            radius: 0.5
-          });
-        }
-
-        
         const landmarks = results.multiFaceLandmarks[0];
         const pose = this._estimatePose(landmarks);
         const mouthOpen = this._detectMouthOpen(landmarks);
@@ -125,7 +68,7 @@ class FaceLivenessSDK {
         const fullActionText = `${pose.action} ${additionalStatus}`;
 
         if (fullActionText !== this.lastPrintedAction) {
-          console.log(fullActionText);
+          // console.log(fullActionText);
           this.lastPrintedAction = fullActionText;
         }
 
@@ -135,14 +78,13 @@ class FaceLivenessSDK {
           this.triggeredVerified = true;
           this.statusElement.textContent = `✅ 验证通过 🎉`;
           this.timerElement.style.display = 'none';
-          this.onVerified();
+          await this._performFaceRecognition();
         } else if (!passed) {
-          this.statusElement.textContent = `请 ${this.challengeSequence[this.currentStep]}`;
+          this.statusElement.textContent = `请 ${this.challengeSequence[this.currentStep]}｜当前：${pose.action} ${additionalStatus}`;
         }
       } else {
         this.statusElement.textContent = '未检测到人脸';
       }
-      this.canvasCtx.restore();
     });
 
     const camera = new Camera(this.videoElement, {
@@ -151,6 +93,45 @@ class FaceLivenessSDK {
       height: 480
     });
     camera.start();
+  }
+
+  async _performFaceRecognition() {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.videoElement.videoWidth;
+    canvas.height = this.videoElement.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(this.videoElement, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(async (blob) => {
+      const formData = new FormData();
+      formData.append('file', blob, 'frame.png');
+
+      try {
+        const response = await fetch(this.recognitionUrl, {
+          method: "POST",
+          headers: {
+            "x-api-key": this.apiKey
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+        console.log("人脸识别结果:", data);
+
+        const subjects = data?.result?.[0]?.subjects || [];
+        if (subjects.length > 0 && subjects[0].similarity >= 0.95) {
+          const subjectName = subjects[0].subject;
+          this.onVerified(subjectName);
+        } else {
+          this.statusElement.textContent = `❌ 身份不匹配！`;
+          this.onFailed();
+        }
+      } catch (err) {
+        console.error("人脸识别请求失败", err);
+        this.statusElement.textContent = `❌ 网络错误！`;
+        this.onFailed();
+      }
+    }, 'image/png');
   }
 
   _detectMouthOpen(landmarks) {
