@@ -4,12 +4,13 @@ class FaceLivenessSDK {
     this.videoElement = document.getElementById(options.videoElementId);
     this.statusElement = document.getElementById(options.statusElementId);
     this.timerElement = document.getElementById(options.timerElementId);
+    this.canvasElement = document.getElementById(options.canvasElementId);
     this.challengeSequence = options.challengeSequence || ["张嘴", "点头", "眨眼", "向右转头"];
     this.timeout = options.timeout || 30;
+    this.apiUrl = options.apiUrl;
+    this.apiKey = options.apiKey;
     this.onVerified = options.onVerified || function () {};
     this.onFailed = options.onFailed || function () {};
-    this.recognitionUrl = options.recognitionUrl;
-    this.apiKey = options.apiKey;
 
     this.currentStep = 0;
     this.verified = false;
@@ -45,6 +46,31 @@ class FaceLivenessSDK {
     }, 1000);
   }
 
+  _drawFaceGuide(ctx) {
+    const canvas = this.canvasElement;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radiusX = canvas.width * 0.25;
+    const radiusY = canvas.height * 0.35;
+  
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  
+    ctx.save();
+    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);  // 取消镜像翻转
+    ctx.font = '16px Arial';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.textAlign = 'center';
+    ctx.fillText('请将脸部对准椭圆区域', canvas.width / 2, canvas.height - 30);
+    ctx.restore();
+  }
+
   _initFaceMesh() {
     const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
@@ -58,33 +84,48 @@ class FaceLivenessSDK {
     });
 
     faceMesh.onResults(async (results) => {
+      const canvasCtx = this.canvasElement.getContext('2d');
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+      canvasCtx.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
+      this._drawFaceGuide(canvasCtx);
+
       if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        const landmarks = results.multiFaceLandmarks[0];
-        const pose = this._estimatePose(landmarks);
-        const mouthOpen = this._detectMouthOpen(landmarks);
-        const bothEyesClosed = this._detectEyeClosed(landmarks, true) && this._detectEyeClosed(landmarks, false);
+        for (const landmarks of results.multiFaceLandmarks) {
+          drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, { color: 'rgba(192,192,192,0.3)', lineWidth: 0.5 });
+          drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, { color: 'rgba(255,48,48,0.4)', lineWidth: 0.5 });
+          drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, { color: 'rgba(48,255,48,0.4)', lineWidth: 0.5 });
+          drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, { color: 'rgba(224,224,224,0.3)', lineWidth: 0.5 });
+          drawLandmarks(canvasCtx, landmarks, { color: 'rgba(255,111,0,0.3)', radius: 0.5 });
 
-        const additionalStatus = `${mouthOpen ? '👄张嘴' : ''}${bothEyesClosed ? ' 👁️眨眼' : ''}`;
-        const fullActionText = `${pose.action} ${additionalStatus}`;
+          const pose = this._estimatePose(landmarks);
+          const mouthOpen = this._detectMouthOpen(landmarks);
+          const bothEyesClosed = this._detectEyeClosed(landmarks, true) && this._detectEyeClosed(landmarks, false);
 
-        if (fullActionText !== this.lastPrintedAction) {
-          // console.log(fullActionText);
-          this.lastPrintedAction = fullActionText;
-        }
+          const additionalStatus = `${mouthOpen ? '👄张嘴' : ''}${bothEyesClosed ? ' 👁️眨眼' : ''}`;
+          const fullActionText = `${pose.action} ${additionalStatus}`;
 
-        const passed = this._checkPoseSequence(pose, mouthOpen, bothEyesClosed);
+          if (fullActionText !== this.lastPrintedAction) {
+            // console.log(fullActionText);
+            this.lastPrintedAction = fullActionText;
+          }
 
-        if (passed && !this.triggeredVerified) {
-          this.triggeredVerified = true;
-          this.statusElement.textContent = `✅ 验证通过 🎉`;
-          this.timerElement.style.display = 'none';
-          await this._performFaceRecognition();
-        } else if (!passed) {
-          this.statusElement.textContent = `请 ${this.challengeSequence[this.currentStep]}｜当前：${pose.action} ${additionalStatus}`;
+          const passed = this._checkPoseSequence(pose, mouthOpen, bothEyesClosed);
+
+          if (passed && !this.triggeredVerified) {
+            this.triggeredVerified = true;
+            this.statusElement.textContent = `✅ 验证通过 🎉`;
+            this.timerElement.style.display = 'none';
+            await this._performFaceRecognition();
+          } else if (!passed) {
+            this.statusElement.textContent = `请 ${this.challengeSequence[this.currentStep]}｜当前：${pose.action} ${additionalStatus}`;
+          }
         }
       } else {
         this.statusElement.textContent = '未检测到人脸';
       }
+
+      canvasCtx.restore();
     });
 
     const camera = new Camera(this.videoElement, {
@@ -104,14 +145,12 @@ class FaceLivenessSDK {
 
     canvas.toBlob(async (blob) => {
       const formData = new FormData();
-      formData.append('file', blob, 'frame.png');
+      formData.append('source_image', blob, 'frame.png');
 
       try {
-        const response = await fetch(this.recognitionUrl, {
+        const response = await fetch(this.apiUrl, {
           method: "POST",
-          headers: {
-            "x-api-key": this.apiKey
-          },
+          headers: { "x-api-key": this.apiKey },
           body: formData
         });
 
