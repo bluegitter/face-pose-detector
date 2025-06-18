@@ -50,26 +50,61 @@ class FaceLivenessSDK {
     const canvas = this.canvasElement;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radiusX = canvas.width * 0.25;
-    const radiusY = canvas.height * 0.35;
+  
+    // 👇 缩小横向（从 0.45 → 0.36），增加纵向（从 0.6 → 0.7）
+    const faceWidth = canvas.width * 0.40;
+    const faceHeight = canvas.height * 0.65;
+  
+    const topY = centerY - faceHeight / 2;
+    const bottomY = centerY + faceHeight / 2;
+    const leftX = centerX - faceWidth / 2;
+    const rightX = centerX + faceWidth / 2;
   
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 3]);
+  
     ctx.beginPath();
-    ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, 2 * Math.PI);
+  
+    // 顶部圆额头
+    ctx.moveTo(leftX + 25, topY + 20);
+    ctx.bezierCurveTo(
+      centerX - 50, topY - 35,
+      centerX + 50, topY - 35,
+      rightX - 25, topY + 20
+    );
+  
+    // 右脸到下巴
+    ctx.bezierCurveTo(
+      rightX + 30, centerY - 10,
+      rightX - 5, bottomY - 25,
+      centerX, bottomY
+    );
+  
+    // 下巴到左脸
+    ctx.bezierCurveTo(
+      leftX + 5, bottomY - 25,
+      leftX - 30, centerY - 10,
+      leftX + 25, topY + 20
+    );
+  
+    ctx.closePath();
     ctx.stroke();
     ctx.restore();
   
+    // 提示文字
     ctx.save();
-    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);  // 取消镜像翻转
+    ctx.setTransform(-1, 0, 0, 1, canvas.width, 0);
     ctx.font = '16px Arial';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.textAlign = 'center';
-    ctx.fillText('请将脸部对准椭圆区域', canvas.width / 2, canvas.height - 30);
+    ctx.fillText('请将脸部对准轮廓线区域', canvas.width / 2, canvas.height - 30);
     ctx.restore();
   }
+  
+  
+  
 
   _initFaceMesh() {
     const faceMesh = new FaceMesh({
