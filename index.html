@@ -53,7 +53,7 @@
       timerElementId: "timer",
       challengeSequence: ["张嘴", "点头", "眨眼", "向左转头", "向右转头"],
       timeout: 30,
-      apiUrl: "https://localhost:9443/api/v1/recognition/recognize",
+      apiUrl: "https://192.168.14.162:9443/api/v1/recognition/recognize",
       apiKey: "d295e5bf-152c-4cf9-bb91-0088c64cfb12",
       onVerified: (subjectName) => alert(`✅ 验证通过！用户：${subjectName}`),
       onFailed: () => alert("❌ 验证失败，请重试。")
