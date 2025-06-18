@@ -145,7 +145,7 @@ class FaceLivenessSDK {
 
     canvas.toBlob(async (blob) => {
       const formData = new FormData();
-      formData.append('source_image', blob, 'frame.png');
+      formData.append('file', blob, 'frame.png');
 
       try {
         const response = await fetch(this.apiUrl, {
